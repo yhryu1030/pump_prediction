@@ -19,5 +19,16 @@ All submissions should consist of 3 distinct artifacts
 
 E-mail these artifiacts to nwhite@aimconsulting.com before the end of prescriped time to be eligable for contention
 
+## Evaluation Metric
 
+The submitted predictions will be evaluated with the classic
+
+
+## Presentation Format
+
+1.) Team Intro
+2.) Results
+3.) Approach
+4.) Biggest Challenges
+5.) Lessons learned
 
