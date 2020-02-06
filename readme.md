@@ -15,7 +15,7 @@ The data for this competition comes from the Tarifa, a platform which aggregates
 All submissions should consist of 3 distinct artifacts
 - test set predictions.  This file should be formated according the example given in the 'SubmissionFormat.csv'
 - code base used to produce the predictions
-- the description and online location of supplemental data sources used ot produce the predicions (if any)
+- the description and online location of supplemental data sources used to produce the predicions (if any)
 
 E-mail these artifiacts to nwhite@aimconsulting.com before the end of prescriped time to be eligable for contention
 
