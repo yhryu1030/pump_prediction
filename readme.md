@@ -13,12 +13,12 @@ The data for this competition comes from the Tarifa, a platform which aggregates
 ## Submission Requirements
 
 All submissions should consist of 4 distinct artifacts
-- test set predictions.  This file should be formated according the example given in the 'SubmissionFormat.csv'
+- test set predictions.  This file should be formatted according the example given in the 'SubmissionFormat.csv'
 - code base used to produce the predictions
 - the description and online location of supplemental data sources used to produce the predicions (if any)
 - presentation powerpoint
 
-E-mail these artifiacts to nwhite@aimconsulting.com before the end of competition time: Thursday, February 13th @ 5:00 PM CT
+E-mail these artifiacts to hackathon@aimconsulting.com before the end of competition time: Thursday, February 13th @ 5:00 PM CT
 
 
 ## Evaluation Metric
