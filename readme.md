@@ -23,7 +23,10 @@ E-mail these artifiacts to hackathon@aimconsulting.com before the end of competi
 
 ## Evaluation Metric
 
-The submitted predictions will be evaluated with multi-class log-loss score.  An exaplantion of this metric can be found here: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html
+
+The metric used for this competition is the classification rate, which calculates the percentage of rows where the predicted class ŷ  in the submission matches the actual class, y in the validation set. The maximum is 1 and the minimum is 0. The goal is to maximize the classification rate.
+
+Teams are free to use any metric during model training and testing phase.
 
 
 ## Presentation Format
