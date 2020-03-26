@@ -1,0 +1,343 @@
+---
+title: "water pumps"
+author: "Josh Upadhyay"
+date: "2/10/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Load packages
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+library(caret)
+library(rpart)       # for building trees
+library(rpart.plot)  # for plotting trees
+library(class)       # for the instructor's plotting functions
+library(ranger)
+```
+
+
+```{r}
+## Read in data
+training_values <- read.csv("/Users/joshupadhyay/Downloads/pump_prediction-master/data/training_set_values.csv")
+training_labels <- read.csv("/Users/joshupadhyay/Downloads/pump_prediction-master/data/training_set_labels.csv")
+
+training_data <- training_values %>%
+  left_join(training_labels, by = "id")
+```
+
+
+```{r}
+colnames(training_data)
+```
+
+```{r}
+colnames(training_data)[!colnames(training_data)%in% colnames(cleaned)]
+```
+
+
+```{r}
+cleaned <- training_data%>%
+  select(-c('recorded_by', 'scheme_name', 'extraction_type_class', 'extraction_type'))
+
+
+```
+
+
+```{r}
+as.vector(colnames(cleaned[sapply(cleaned, is.factor)]))
+```
+
+```{r}
+
+cleaned$region_code <- as.factor(cleaned$region_code)
+cleaned$district_code <- as.factor(cleaned$district_code)
+
+```
+
+
+```{r}
+colSums(is.na(cleaned))
+
+cleaned_no_na <- na.omit(cleaned)
+
+cleaned_no_na %>%
+  select(status_group)%>%
+  group_by(status_group)%>%
+  summarize(n()/47944)
+```
+
+
+```{r}
+cleaned%>%
+  filter(num_private > 40) %>%
+  group_by(region_code)%>%
+  summarize(n())%>%
+  arrange()
+```
+
+The highest count pumps are mainly in region 4. 
+
+
+
+
+
+
+Ranger Package: 
+```{r}
+
+# hyperparameter grid search
+hyper_grid <- expand.grid(
+  mtry       = seq(12, 40, by = 8),
+  node_size  = seq(3, 9, by = 2),
+  sample_size = c(.55, .632, .70, .80),
+  OOB_RMSE   = 0
+)
+
+
+for (i in 1:nrow(hyper_grid)){
+  
+  
+  clean_ranger <- ranger(
+    formula = status_group ~ .,
+    data = cleaned_no_na,
+    num.trees = 500,
+    mtry = hyper_grid$mtry[i],
+    min.node.size = hyper_grid$node_size[i],
+    sample.fraction = hyper_grid$sample_size[i],
+    seed = 456
+  )
+  
+  hyper_grid$OOB_RMSE[i] <- clean_ranger$prediction.error
+  
+}
+
+
+```
+
+```{r}
+hyper_results <- hyper_grid%>%
+  arrange(OOB_RMSE)%>%
+  mutate(accuracy = 100 - (OOB_RMSE)^2*100)%>%
+  filter(OOB_RMSE > .3)
+
+hyper_results%>%
+  group_by(mtry)%>%
+  summarize(mean(accuracy)) #mtry 12 is the best
+
+
+
+hyper_results%>%
+  filter(mtry == 12)%>%
+  arrange(desc(accuracy))
+
+hyper_results%>%
+  filter(mtry == 12)%>%
+  group_by(sample_size)%>%
+  summarize(mean(accuracy))
+  arrange(desc(accuracy))
+
+  
+hyper_results%>%
+  arrange(desc(accuracy))
+  
+```
+
+
+
+
+```{r}
+# hyperparameter grid search
+hyper_grid2 <- expand.grid(
+  mtry       = seq(8, 14, by = 3),
+  node_size  = seq(5, 9, by = 2),
+  sample_size = c(.632, .80),
+  Accuracy   = 0
+)
+
+
+for (i in 1:nrow(hyper_grid)){
+  
+  clean_ranger2 <- ranger(
+    formula = status_group ~ .,
+    data = cleaned_no_na,
+    num.trees = 500,
+    mtry = hyper_grid2$mtry[i],
+    min.node.size = hyper_grid2$node_size[i],
+    sample.fraction = hyper_grid2$sample_size[i],
+    seed = 456
+  )
+  
+  hyper_grid2$Accuracy[i] <- clean_ranger2$prediction.error
+  
+}
+
+```
+
+
+```{r}
+hyper_results2 <- hyper_grid2%>%
+  mutate(accuracy = 1 - Accuracy)
+
+hyper_results2%>%
+  arrange(desc(accuracy))
+```
+
+
+# Adding a little more of the least represented class by upsampling:
+```{r}
+passthrough <- cleaned_no_na%>%
+  select(-status_group)
+```
+
+
+```{r}
+upsampled <- upSample(passthrough, cleaned_no_na$status_group)
+
+minorty_cases <- upsampled%>%
+  filter(Class == 'functional needs repair')%>%
+  sample_frac(0.10)
+
+minorty_cases %>%
+  rename(status_group = Class) -> minorty_casess
+
+```
+
+```{r}
+cleaned_na2 <- cleaned_no_na%>%
+  rbind(minorty_casess)
+```
+
+
+```{r}
+# hyperparameter grid search
+hyper_grid_up <- expand.grid(
+  mtry       = seq(10, 14, by = 2),
+  node_size  = seq(3, 9, by = 2),
+  sample_size = c(.632, .550),
+  error   = 0
+)
+
+
+for (i in 1:nrow(hyper_grid_up)){
+  
+  upsampled_ranger <- ranger(
+    formula = status_group ~ .,
+    data = cleaned_na2,
+    num.trees = 500,
+    mtry = hyper_grid_up$mtry[i],
+    min.node.size = hyper_grid_up$node_size[i],
+    sample.fraction = hyper_grid_up$sample_size[i],
+    seed = 456
+  )
+  
+  hyper_grid_up$error[i] <- upsampled_ranger$prediction.error
+  
+}
+
+```
+
+```{r}
+hyper_grid_up%>%
+  mutate(accuracy = 1 - error)%>%
+  filter(accuracy < 1)%>%
+  arrange(desc(accuracy))
+```
+
+```{r}
+
+# hyperparameter grid search
+hyper_grid_final <- expand.grid(
+  mtry       = c(12,8),
+  node_size  = seq(3, 5, by = 2),
+  sample_size = c(.663, 0.8),
+  error   = 0
+)
+
+
+for (i in 1:nrow(hyper_grid_final)){
+  
+  another_ranger <- ranger(
+      formula = status_group ~ .,
+      data = cleaned_no_na,
+      num.trees = 500,
+      mtry = hyper_grid_final$sample_size[i],
+      min.node.size = hyper_grid_final$node_size[i],
+      sample.fraction = hyper_grid_final$sample_size[i],
+      seed = 456,
+      class.weights = c(0.30,0.4,0.3)
+    )
+  
+   hyper_grid_final$error[i] <- another_ranger$prediction.error
+}   
+   
+```
+
+
+```{r}
+f1 <- hyper_grid_final%>%
+  mutate(accuracy = 1 - error)
+```
+
+```{r}
+f2 <- hyper_grid_final%>%
+  mutate(accuracy = 1 - error)%>%
+  arrange(desc(accuracy))
+
+(f2)
+```
+
+
+```{r}
+
+final_test <- hyper_grid_final%>%
+  mutate(accuracy = 1 - error)%>%
+  arrange(desc(accuracy))
+```
+
+```{r}
+final_test%>%
+  arrange(desc(accuracy))%>%
+  head()
+```
+
+
+
+Final model:
+
+```{r}
+  final_rf <- ranger(
+      formula = status_group ~ .,
+      data = cleaned_no_na,
+      num.trees = 500,
+      mtry = 12,
+      min.node.size = 3,
+      sample.fraction = 0.8,
+      seed = 456,
+      class.weights = c(0.30,0.4,0.3),
+      write.forest = TRUE
+    )
+```
+
+```{r}
+test <- read.csv("/Users/joshupadhyay/Downloads/pump_prediction-master/data/test_set_values.csv")
+
+test_submission <- read.csv("/Users/joshupadhyay/Downloads/pump_prediction-master/data/SubmissionFormat.csv")
+
+
+results <- predict(final_rf,
+                   test)
+
+
+test_submission %>%
+  select(-status_group)%>%
+  mutate(status_group = results$predictions) -> test_submission
+
+```
+
+```{r}
+write.csv(test_submission, "competition_submission.csv")
+```
+
