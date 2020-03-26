@@ -1,6 +1,6 @@
 ---
 title: "water pumps"
-author: "Josh Upadhyay"
+author: "Chase Yoo, Josh Upadhyay"
 date: "2/10/2020"
 output: html_document
 ---
